@@ -2,6 +2,8 @@
 
 **fzy** is a fast, simple fuzzy text selector for the terminal with an advanced scoring algorithm.
 
+**NOTE:** This fork supports skimming and normalizing text especially Arabic letters.
+
 [Try it out online!](http://jhawthorn.github.io/fzy-demo)
 
 ![](http://i.hawth.ca/u/fzy_animated_demo.svg)
