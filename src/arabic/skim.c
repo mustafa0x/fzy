@@ -139,8 +139,9 @@ size_t Arabic_SkimString(const uint32_t *str, uint32_t **out)
 			continue;
 		}
 
-		//Non-arabic letters not looked in this function
-		InsertChar(str[i], out, &strLengthNew, strLength);
+		//Other letters not looked in this function (Excluding harakat)
+		if(!(str[i] >= 0xD890 && str[i] <= 0xD89A) || (str[i] >= 0xD98B && str[i] <= 0xD99F))
+			InsertChar(str[i], out, &strLengthNew, strLength);
 	}
 
 	//Null terminator
