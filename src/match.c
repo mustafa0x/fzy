@@ -8,24 +8,57 @@
 
 #include "match.h"
 #include "bonus.h"
+#include "normalize.h"
+#include "util.h"
 
 #include "../config.h"
 
-char *strcasechr(const char *s, char c) {
-	const char accept[3] = {c, toupper(c), 0};
-	return strpbrk(s, accept);
-}
-
 int has_match(const char *needle, const char *haystack) {
-	while (*needle) {
-		char nch = *needle++;
+	const unsigned char *needle_utf8 = needle;
+	const unsigned char *haystack_utf8 = haystack;
+	
+	uint32_t *needle_utf32 = NULL;
+	uint32_t *haystack_utf32 = NULL;
 
-		if (!(haystack = strcasechr(haystack, nch))) {
-			return 0;
+	UTF8To32(needle_utf8, &needle_utf32);
+	UTF8To32(haystack_utf8, &haystack_utf32);
+
+	uint32_t *normalizedNeedle = NULL;
+	uint32_t *normalizedHaystack = NULL;
+
+	size_t needleLength = normalize(needle_utf32, &normalizedNeedle);
+	size_t haystackLength = normalize(haystack_utf32, &normalizedHaystack);
+
+	free(needle_utf32);
+	free(haystack_utf32);
+
+	if(needleLength > haystackLength)
+		return 0;
+
+	unsigned char doesContain = 0;
+	for(size_t i = 0; i < haystackLength-needleLength; i++)
+	{
+		unsigned char doesContainSegment = 1;
+		for(size_t j = 0; j < needleLength; j++)
+		{
+			if(normalizedNeedle[j] != normalizedHaystack[i+j])
+			{
+				doesContainSegment = 0;
+				break;
+			}
 		}
-		haystack++;
+
+		if(doesContainSegment)
+		{
+			doesContain = 1;
+			break;
+		}
 	}
-	return 1;
+
+	free(normalizedNeedle);
+	free(normalizedHaystack);
+
+	return doesContain;
 }
 
 #define SWAP(x, y, T) do { T SWAP = x; x = y; y = SWAP; } while (0)
