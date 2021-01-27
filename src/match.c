@@ -34,21 +34,44 @@ int has_match(const char *needle, const char *haystack) {
 
 	if(needleLength > haystackLength)
 		return 0;
+	
+	unsigned int matchScoreThreshold = (needleLength * 1) / 2;
+	unsigned int sequentialMatchScoreThreshold = (needleLength * 3) / 4;
 
+	unsigned int maxMatches = 0;
+	unsigned int maxSequentialMatches = 0;
+
+	unsigned char isPrevEqual = 0;
 	unsigned char doesContain = 0;
 	for(size_t i = 0; i < haystackLength-needleLength; i++)
 	{
-		unsigned char doesContainSegment = 1;
-		for(size_t j = 0; j < needleLength; j++)
+		unsigned int normalMatches = 0;
+		unsigned int sequentialMatches = 0;
+
+		for(size_t j = 0, k = 0; k < needleLength && i+j < haystackLength; j++, k++)
 		{
-			if(normalizedNeedle[j] != normalizedHaystack[i+j])
+			if(normalizedNeedle[k] == normalizedHaystack[i+j])
 			{
-				doesContainSegment = 0;
-				break;
+				if(isPrevEqual)
+					sequentialMatches++;
+
+				normalMatches++;
+				isPrevEqual = 1;
+			}
+			else
+			{
+				k--;
+				isPrevEqual = 0;
 			}
 		}
 
-		if(doesContainSegment)
+		if(normalMatches > maxMatches)
+			maxMatches = normalMatches;
+
+		if(sequentialMatches > maxSequentialMatches)
+			maxSequentialMatches = sequentialMatches;
+
+		if(maxMatches >= matchScoreThreshold && maxSequentialMatches >= sequentialMatchScoreThreshold)
 		{
 			doesContain = 1;
 			break;
