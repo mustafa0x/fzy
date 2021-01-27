@@ -7,8 +7,9 @@
 #include "options.h"
 
 struct scored_result {
-	score_t score;
+	double score;
 	const char *str;
+	size_t haystackLength;
 };
 
 typedef struct {

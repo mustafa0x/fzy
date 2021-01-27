@@ -19,21 +19,24 @@ static int cmpchoice(const void *_idx1, const void *_idx2) {
 	const struct scored_result *a = _idx1;
 	const struct scored_result *b = _idx2;
 
-	if (a->score == b->score) {
-		/* To ensure a stable sort, we must also sort by the string
-		 * pointers. We can do this since we know all the strings are
-		 * from a contiguous memory segment (buffer in choices_t).
-		 */
-		if (a->str < b->str) {
+	if (a->score == b->score)
+	{
+		if(a->haystackLength < b->haystackLength)
 			return -1;
-		} else {
+		else if(a->haystackLength > b->haystackLength)
 			return 1;
-		}
-	} else if (a->score < b->score) {
-		return 1;
-	} else {
+
+		return 0;
+	}
+	else if(a->score > b->score)
+	{
 		return -1;
 	}
+	else
+	{
+		return 1;
+	}
+	
 }
 
 static void *safe_realloc(void *buffer, size_t size) {
@@ -230,9 +233,12 @@ static void *choices_search_worker(void *data) {
 		}
 
 		for(size_t i = start; i < end; i++) {
-			if (has_match(job->search, c->strings[i])) {
+			double score = 0;
+			size_t haystackLength = 0;
+			if (has_match(job->search, c->strings[i], &haystackLength, &score)) {
 				result->list[result->size].str = c->strings[i];
-				result->list[result->size].score = match(job->search, c->strings[i]);
+				result->list[result->size].score = score;
+				result->list[result->size].haystackLength = haystackLength;
 				result->size++;
 			}
 		}

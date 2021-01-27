@@ -13,7 +13,7 @@
 
 #include "../config.h"
 
-int has_match(const char *needle, const char *haystack) {
+int has_match(const char *needle, const char *haystack, size_t *_haystackLength, double *matchScore) {
 	const unsigned char *needle_utf8 = needle;
 	const unsigned char *haystack_utf8 = haystack;
 	
@@ -28,6 +28,7 @@ int has_match(const char *needle, const char *haystack) {
 
 	size_t needleLength = normalize(needle_utf32, &normalizedNeedle);
 	size_t haystackLength = normalize(haystack_utf32, &normalizedHaystack);
+	*_haystackLength = haystackLength; //Needed for sorting later
 
 	free(needle_utf32);
 	free(haystack_utf32);
@@ -35,8 +36,8 @@ int has_match(const char *needle, const char *haystack) {
 	if(needleLength > haystackLength)
 		return 0;
 	
-	unsigned int matchScoreThreshold = (needleLength * 1) / 2;
-	unsigned int sequentialMatchScoreThreshold = (needleLength * 3) / 4;
+	unsigned int matchScoreThreshold = (needleLength * 5) / 6; //80%
+	unsigned int sequentialMatchScoreThreshold = (needleLength * 2) / 3; //66%
 
 	unsigned int maxMatches = 0;
 	unsigned int maxSequentialMatches = 0;
@@ -72,14 +73,14 @@ int has_match(const char *needle, const char *haystack) {
 			maxSequentialMatches = sequentialMatches;
 
 		if(maxMatches >= matchScoreThreshold && maxSequentialMatches >= sequentialMatchScoreThreshold)
-		{
 			doesContain = 1;
-			break;
-		}
 	}
 
 	free(normalizedNeedle);
 	free(normalizedHaystack);
+
+	if(needleLength)
+		*matchScore = (((maxSequentialMatches*3)+maxMatches) * 1000) / needleLength;
 
 	return doesContain;
 }
@@ -126,19 +127,38 @@ static void setup_match_struct(struct match_struct *match, const char *needle, c
 }
 
 static inline void match_row(const struct match_struct *match, int row, score_t *curr_D, score_t *curr_M, const score_t *last_D, const score_t *last_M) {
-	int n = match->needle_len;
-	int m = match->haystack_len;
-	int i = row;
 
 	const char *lower_needle = match->lower_needle;
 	const char *lower_haystack = match->lower_haystack;
 	const score_t *match_bonus = match->match_bonus;
 
+	const unsigned char *needle_utf8 = lower_needle;
+	const unsigned char *haystack_utf8 = lower_haystack;
+	
+	uint32_t *needle_utf32 = NULL;
+	uint32_t *haystack_utf32 = NULL;
+
+	UTF8To32(needle_utf8, &needle_utf32);
+	UTF8To32(haystack_utf8, &haystack_utf32);
+
+	uint32_t *normalizedNeedle = NULL;
+	uint32_t *normalizedHaystack = NULL;
+
+	size_t needleLength = normalize(needle_utf32, &normalizedNeedle);
+	size_t haystackLength = normalize(haystack_utf32, &normalizedHaystack);
+
+	int n = needleLength;
+	int m = haystackLength;
+	int i = row;
+
+	free(needle_utf32);
+	free(haystack_utf32);
+
 	score_t prev_score = SCORE_MIN;
 	score_t gap_score = i == n - 1 ? SCORE_GAP_TRAILING : SCORE_GAP_INNER;
 
 	for (int j = 0; j < m; j++) {
-		if (lower_needle[i] == lower_haystack[j]) {
+		if (normalizedNeedle[i] == normalizedHaystack[j]) {
 			score_t score = SCORE_MIN;
 			if (!i) {
 				score = (j * SCORE_GAP_LEADING) + match_bonus[j];
